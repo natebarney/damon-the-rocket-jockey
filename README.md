@@ -37,7 +37,7 @@ to be installed:
 * [Python 3](https://www.python.org/) (for generating dependency files)
 * [GNU Make](https://www.gnu.org/software/make/)
 
-Once these are installed (and vailable on your shell's search path), you can
+Once these are installed (and available on your shell's search path), you can
 build the game by navigating to the repository root and issuing the command:
 
 ```
