@@ -4,6 +4,7 @@
 .global music_play
 .global music_resume
 .global music_stop
+.global music_toggle_mute
 
 .global music_load_title
 .global music_load_level

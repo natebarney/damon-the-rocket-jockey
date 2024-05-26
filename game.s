@@ -87,6 +87,17 @@ not_game_over:
 
 .proc game_update
 
+    jsr GETIN
+    cmp #'Q'
+    bne not_quitting
+    stz $01     ; restore default rom bank
+    jmp ($fffa) ; jump to NMI handler (like ctrl-alt-restore)
+not_quitting:
+    cmp #'M'
+    bne not_muting
+    jsr music_toggle_mute
+not_muting:
+
     jsr update_bullet_sound
     jsr update_crash_sound
     jsr update_bonus_sound
@@ -99,7 +110,6 @@ not_game_over:
     jmp update_title
 not_title:
 
-    jsr GETIN   ; drain keyboard buffer
     lda game_state
 
     cmp #GAME_STATE::GET_READY

@@ -18,6 +18,8 @@ music_state: .res 1
 current_note: .res 1
 music_start: .res 2
 music_delay: .res 1
+music_muted: .res 1
+override_mute: .res 1
 
 .code
 
@@ -35,6 +37,9 @@ music_delay: .res 1
 
     lda #MUSIC_STATE::STOPPED
     sta music_state
+
+    stz music_muted
+    stz override_mute
 
     rts
 
@@ -126,8 +131,15 @@ play_note:
     iny
     lda (music_ptr),y
     sta current_note
-    phy
     tax
+
+    ; if muted and not overridden, skip playing this note
+    lda music_muted
+    eor #$ff
+    ora override_mute
+    beq read_delay
+
+    phy
     lda #0
     ldy #0
     clc
@@ -171,6 +183,8 @@ read_delay:
 
 .proc music_load_title
 
+    stz override_mute
+
     lda #0
     ldx #<music_patch
     ldy #>music_patch
@@ -186,6 +200,8 @@ read_delay:
 .endproc
 
 .proc music_load_level
+
+    stz override_mute
 
     lda #0
     ldx #<music_patch
@@ -203,6 +219,9 @@ read_delay:
 
 .proc music_load_next_round
 
+    lda #$ff
+    sta override_mute
+
     lda #0
     ldx #<interlude_patch
     ldy #>interlude_patch
@@ -219,6 +238,9 @@ read_delay:
 
 .proc music_load_level_complete
 
+    lda #$ff
+    sta override_mute
+
     lda #0
     ldx #<interlude_patch
     ldy #>interlude_patch
@@ -230,6 +252,27 @@ read_delay:
     lda #>level_complete_music
     sta music_start+1
     jmp music_rewind
+
+.endproc
+
+.proc music_toggle_mute
+
+    ; toggle music_muted and return if the result is "not muted"
+    lda music_muted
+    eor #$ff
+    sta music_muted
+    beq done
+
+    ; music is muted, but if mute is overridden, return
+    lda override_mute
+    bne done
+
+    ; music is muted and not overridden, so silence current note
+    lda #0
+    jmp ym_release
+
+done:
+    rts
 
 .endproc
 

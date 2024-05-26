@@ -2,7 +2,6 @@
 .include "color.inc"
 .include "graphics.inc"
 .include "input.inc"
-.include "kernal.inc"
 .include "music.inc"
 .include "score.inc"
 .include "sprite.inc"
@@ -100,9 +99,6 @@ not_animating:
     bne not_done
     rts
 not_done:
-
-    ; drain keyboard buffer
-    jsr GETIN
 
     jmp update_letter_slide
 
@@ -214,13 +210,6 @@ not_done:
 .endproc
 
 .proc title_update_animating
-
-    jsr GETIN
-    cmp #'Q'
-    bne not_quitting
-    stz $01     ; restore default rom bank
-    jmp ($fffa) ; jump to NMI handler (like ctrl-alt-restore)
-not_quitting:
 
     jsr read_input
     lda current_input
@@ -447,26 +436,30 @@ n_letter_data:
 title_screen_text:
 .byte 11, 9, COLOR::PURPLE
 .asciiz "THE ROCKET JOCKEY"
-.byte 9, 13, COLOR::L_RED
+.byte 9, 12, COLOR::L_RED
 .asciiz "WRITTEN BY"
-.byte 20, 13, COLOR::WHITE
+.byte 20, 12, COLOR::WHITE
 .asciiz "NATE BARNEY"
-.byte 11, 15, COLOR::L_BLUE
+.byte 11, 14, COLOR::L_BLUE
 .asciiz "@ 2024 NATE BARNEY"
-.byte 4, 18, COLOR::L_RED
+.byte 4, 17, COLOR::L_RED
 .asciiz "BASED ON"
-.byte 13, 18, COLOR::PURPLE
+.byte 13, 17, COLOR::PURPLE
 .asciiz "NOMAD: THE SPACE PIRATE"
-.byte 10, 20, COLOR::L_BLUE
+.byte 10, 19, COLOR::L_BLUE
 .asciiz "@ 1985 MIKE POULLAS"
-.byte 7, 24, COLOR::YELLOW
+.byte 7, 22, COLOR::YELLOW
 .asciiz "PRESS FIRE BUTTON TO PLAY"
+.byte 7, 24, COLOR::YELLOW
+.asciiz "PRESS ` ' TO TOGGLE MUSIC"
+.byte 14, 24, COLOR::WHITE
+.asciiz "M"
 .byte 11, 26, COLOR::YELLOW
 .asciiz "PRESS ` ' TO QUIT."
 .byte 18, 26, COLOR::WHITE
 .asciiz "Q"
 .byte 35, 29, COLOR::D_GREY
-.asciiz "1.0.0"
+.asciiz "1.1.0"
 .byte 0, 0, 0, 0
 
 d_animation_table:
