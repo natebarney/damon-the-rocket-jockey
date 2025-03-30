@@ -17,7 +17,7 @@
     next_state  .byte
 .endstruct
 
-LETTER_ANIMATION_FRAMES = 6
+LETTER_ANIMATION_FRAMES = 7
 EMERGE_OFFSET = 24
 
 .zeropage
@@ -451,7 +451,7 @@ title_screen_text:
 .byte 7, 22, COLOR::YELLOW
 .asciiz "PRESS FIRE BUTTON TO PLAY"
 .byte 7, 24, COLOR::YELLOW
-.asciiz "PRESS ` ' TO TOGGLE MUSIC"
+.asciiz "PRESS ` ' TO CYCLE MUSIC"
 .byte 14, 24, COLOR::WHITE
 .asciiz "M"
 .byte 11, 26, COLOR::YELLOW
@@ -459,7 +459,7 @@ title_screen_text:
 .byte 18, 26, COLOR::WHITE
 .asciiz "Q"
 .byte 35, 29, COLOR::D_GREY
-.asciiz "1.1.0"
+.asciiz "1.2.0"
 .byte 0, 0, 0, 0
 
 d_animation_table:

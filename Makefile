@@ -16,6 +16,7 @@ MODULES= \
   mobile \
   music \
   palette \
+  pcm \
   pellet \
   player \
   score \
@@ -27,6 +28,21 @@ MODULES= \
   title \
   util \
   vera
+AUDIO= \
+  bassline \
+  melody1 \
+  melody2 \
+  melody3 \
+  melody4 \
+  melody5 \
+  melody6 \
+  melody7 \
+  melody8 \
+  slide \
+  stab1 \
+  stab2 \
+  start \
+  complete
 
 DEPDIR=.deps
 
@@ -35,17 +51,18 @@ CONFIG=$(addsuffix .cfg,$(PROGRAM))
 LABELS=$(addsuffix .lbl,$(PROGRAM))
 MAPFILE=$(addsuffix .map,$(PROGRAM))
 OBJECTS=$(addsuffix .o,$(MODULES))
+SAMPLES=$(addsuffix .pcm,$(AUDIO))
 LISTINGS=$(addsuffix .lst,$(MODULES))
 DEPS=$(addprefix $(DEPDIR)/,$(addsuffix .d,$(MODULES)))
 
 AS_FLAGS=--cpu 65c02 -g
 
-all: $(DEPS) $(OUTPUT)
+all: $(DEPS) $(OUTPUT) $(SAMPLES)
 
-run: $(OUTPUT)
+run: $(OUTPUT) $(SAMPLES)
 	x16emu -prg $(OUTPUT) -run
 
-debug: $(OUTPUT)
+debug: $(OUTPUT) $(SAMPLES)
 	x16emu -prg $(OUTPUT) -run -debug 80d
 
 $(OUTPUT): $(CONFIG) $(OBJECTS)
@@ -58,8 +75,11 @@ $(DEPDIR)/%.d: %.s
 %.o: %.s
 	ca65 $(AS_FLAGS) -l $(addsuffix .lst,$(basename $<)) -o $@ $<
 
+%.pcm: %.wav
+	python util/dumppcm.py $< $@
+
 clean:
-	rm -f $(OUTPUT) $(LABELS) $(LISTINGS) $(MAPFILE) $(OBJECTS)
+	rm -f $(OUTPUT) $(LABELS) $(LISTINGS) $(MAPFILE) $(OBJECTS) $(SAMPLES)
 
 distclean: clean
 	rm -rf $(DEPDIR)

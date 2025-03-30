@@ -114,6 +114,19 @@ L1_VSCROLL_H := $9f3a   ; low nibble
     WIDTH    = %00000001    ; 0=8 pixels, 1=16 pixels
 .endenum
 
+AUDIO_CTRL := $9f3b ; use AUDIO_CTRL_MASK
+AUDIO_RATE := $9f3c ; 25 MHz / $10000 * AUDIO_RATE (max 128 -> 48828.125 Hz)
+AUDIO_DATA := $9f3d ; audio FIFO data (write-only)
+
+.enum AUDIO_CTRL_MASK
+    FIFO_FULL    = %10000000    ; read-only
+    FIFO_RESET   = %10000000    ; write-only
+    FIFO_LOOP    = %11000000    ; write-only
+    SAMPLE_16BIT = %00100000    ; 0=8-bit, 1=16-bit (two's complement signed)
+    STEREO       = %00010000    ; 0=mono, 1=stereo
+    VOLUME       = %00001111    ; 0=silent, 15=max (logarithmic)
+.endenum
+
 PSG_VRAM_BASE = $1f9c0
 SPRITE_ATTR_VRAM = $1FC00
 SPRITE_DATA_VRAM = $13000

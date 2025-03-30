@@ -8,6 +8,7 @@
 .include "level.inc"
 .include "mobile.inc"
 .include "music.inc"
+.include "pcm.inc"
 .include "pellet.inc"
 .include "player.inc"
 .include "score.inc"
@@ -23,6 +24,7 @@ GAME_OVER_FRAMES = 180
 
 game_frame_counter: .res 1
 game_state: .res 1
+respawn: .res 1
 
 .code
 
@@ -90,13 +92,14 @@ not_game_over:
     jsr GETIN
     cmp #'Q'
     bne not_quitting
+    jsr stop_pcm
     stz $01     ; restore default rom bank
     jmp ($fffa) ; jump to NMI handler (like ctrl-alt-restore)
 not_quitting:
     cmp #'M'
-    bne not_muting
-    jsr music_toggle_mute
-not_muting:
+    bne not_music_cycle
+    jsr music_cycle_type
+not_music_cycle:
 
     jsr update_bullet_sound
     jsr update_crash_sound
@@ -153,6 +156,9 @@ not_game_over:
 
 .proc init_title
 
+    ldx #<clips_title
+    ldy #>clips_title
+    jsr start_pcm
     jmp init_title_screen
 
 .endproc
@@ -172,6 +178,7 @@ title_not_done:
 
 .proc init_get_ready
 
+    jsr stop_pcm
     lda #GET_READY_FRAMES
     sta game_frame_counter
     jsr music_stop
@@ -193,6 +200,7 @@ not_done:
 
 .proc init_new_level
 
+    stz respawn
     jsr init_pellet_map
     jsr draw_level_screen
     jsr spawn_player
@@ -208,6 +216,33 @@ not_done:
 .endproc
 
 .proc init_starting
+
+    ; check respawn flag
+    bit respawn
+    bpl not_respawn
+    ldx #<clips_respawn
+    ldy #>clips_respawn
+    bra clip_selected
+
+not_respawn:
+    ; set respawn flag
+    lda #$FF
+    sta respawn
+
+    ; select even or odd level based on low bit of level counter
+    ; (it's actually backwards, because level 1 is odd, but stored as level 0)
+    lda level
+    lsr a
+    bcs even_level
+    ldx #<clips_start_odd
+    ldy #>clips_start_odd
+    bra clip_selected
+even_level:
+    ldx #<clips_start_even
+    ldy #>clips_start_even
+
+clip_selected:
+    jsr start_pcm
 
     jsr music_load_next_round
     jsr music_play
@@ -273,6 +308,9 @@ not_done:
 
 .proc init_dying
 
+    ldx #<clips_death
+    ldy #>clips_death
+    jsr start_pcm
     jsr freeze_bullets
     jsr music_stop
     jsr play_crash_sound
@@ -301,6 +339,9 @@ not_done:
 
 .proc init_level_complete
 
+    ldx #<clips_complete
+    ldy #>clips_complete
+    jsr start_pcm
     jsr freeze_bullets
     jsr music_stop
     jsr music_load_level_complete
@@ -323,6 +364,7 @@ not_done:
 
 .proc init_game_over
 
+    jsr stop_pcm
     lda #GAME_OVER_FRAMES
     sta game_frame_counter
     jsr music_stop

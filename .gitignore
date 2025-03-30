@@ -2,6 +2,7 @@
 *.lbl
 *.lst
 *.map
-damon.prg
-damon-*.zip
+*.prg
+*.pcm
+*.zip
 .deps/

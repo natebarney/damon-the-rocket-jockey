@@ -1,5 +1,6 @@
 .include "kernal.inc"
 .include "music.inc"
+.include "pcm.inc"
 
 .enum MUSIC_CMD
     STOP    = 0
@@ -18,7 +19,7 @@ music_state: .res 1
 current_note: .res 1
 music_start: .res 2
 music_delay: .res 1
-music_muted: .res 1
+music_type: .res 1
 override_mute: .res 1
 
 .code
@@ -38,7 +39,7 @@ override_mute: .res 1
     lda #MUSIC_STATE::STOPPED
     sta music_state
 
-    stz music_muted
+    stz music_type
     stz override_mute
 
     rts
@@ -133,12 +134,20 @@ play_note:
     sta current_note
     tax
 
-    ; if muted and not overridden, skip playing this note
-    lda music_muted
-    eor #$ff
-    ora override_mute
+    ; if music type is PCM, skip playing this note
+    lda music_type
+    cmp #MUSIC_TYPE::PCM
     beq read_delay
 
+    ; if music type is FM, play this note
+    cmp #MUSIC_TYPE::FM
+    beq not_muted
+
+    ; if music_type is FM_MIN, play this note only if override_mute is on
+    lda override_mute
+    beq read_delay
+
+not_muted:
     phy
     lda #0
     ldy #0
@@ -255,21 +264,40 @@ read_delay:
 
 .endproc
 
-.proc music_toggle_mute
+.proc music_cycle_type
 
-    ; toggle music_muted and return if the result is "not muted"
-    lda music_muted
-    eor #$ff
-    sta music_muted
-    beq done
+    ; increment and wrap music_type
+    ldx music_type
+    inx
+    cpx #MUSIC_TYPE::MAX
+    bne not_wrapped
+    ldx #$00
+not_wrapped:
+    stx music_type
 
-    ; music is muted, but if mute is overridden, return
+    ; handle PCM type
+    cpx #MUSIC_TYPE::PCM
+    bne not_pcm
+    lda #0
+    jsr ym_release ; stop FM note
+    lda #$08 ; set PCM volume to 8 (about half)
+    bra set_volume
+not_pcm:
+    lda #$00 ; set PCM volume off
+set_volume:
+    jsr set_pcm_volume
+
+    ; nothing to do for FM type
+
+    ; handle FM_MIN type
+    ldx music_type
+    cpx #MUSIC_TYPE::FM_MIN
+    bne not_fm_min
     lda override_mute
     bne done
-
-    ; music is muted and not overridden, so silence current note
     lda #0
-    jmp ym_release
+    jsr ym_release
+not_fm_min:
 
 done:
     rts
@@ -303,56 +331,45 @@ interlude_patch:
 .byte $ff, $00, $cf, $00 ; $E0 - D1L / RR
 
 title_music:
-
-.byte MUSIC_CMD::NOTE, $1E, 13   ; C2
-.byte MUSIC_CMD::NOTE, $1E, 13   ; C2
-.byte MUSIC_CMD::NOTE, $21, 13   ; D2
-.byte MUSIC_CMD::NOTE, $1E, 13   ; C2
-.byte MUSIC_CMD::NOTE, $26, 13   ; F#2
-.byte MUSIC_CMD::NOTE, $25, 13   ; F2
-.byte MUSIC_CMD::NOTE, $24, 13   ; E2
-.byte MUSIC_CMD::NOTE, $25, 13   ; F2
-.byte MUSIC_CMD::RESTART
-
 level_music:
 
-.byte MUSIC_CMD::NOTE, $1E, 12   ; C2
-.byte MUSIC_CMD::NOTE, $1E, 12   ; C2
-.byte MUSIC_CMD::NOTE, $21, 12   ; D2
-.byte MUSIC_CMD::NOTE, $1E, 12   ; C2
-.byte MUSIC_CMD::NOTE, $26, 12   ; F#2
-.byte MUSIC_CMD::NOTE, $25, 12   ; F2
-.byte MUSIC_CMD::NOTE, $24, 12   ; E2
-.byte MUSIC_CMD::NOTE, $25, 12   ; F2
+.byte MUSIC_CMD::NOTE, $1E, 15   ; C2
+.byte MUSIC_CMD::NOTE, $1E, 15   ; C2
+.byte MUSIC_CMD::NOTE, $21, 15   ; D2
+.byte MUSIC_CMD::NOTE, $1E, 15   ; C2
+.byte MUSIC_CMD::NOTE, $26, 15   ; F#2
+.byte MUSIC_CMD::NOTE, $25, 15   ; F2
+.byte MUSIC_CMD::NOTE, $24, 15   ; E2
+.byte MUSIC_CMD::NOTE, $25, 15   ; F2
 .byte MUSIC_CMD::RESTART
 
 next_round_music:
 
 .byte MUSIC_CMD::NOTE, $3C, 5    ; A#3
-.byte MUSIC_CMD::NOTE, $3D, 5    ; B3
+.byte MUSIC_CMD::NOTE, $3D, 4    ; B3
 .byte MUSIC_CMD::NOTE, $3E, 5    ; C4
-.byte MUSIC_CMD::NOTE, $40, 5    ; C#4
+.byte MUSIC_CMD::NOTE, $40, 4    ; C#4
 .byte MUSIC_CMD::NOTE, $41, 5    ; D4
-.byte MUSIC_CMD::NOTE, $42, 5    ; D#4
+.byte MUSIC_CMD::NOTE, $42, 4    ; D#4
 .byte MUSIC_CMD::NOTE, $44, 5    ; E4
-.byte MUSIC_CMD::NOTE, $45, 5    ; F4
+.byte MUSIC_CMD::NOTE, $45, 4    ; F4
 .byte MUSIC_CMD::NOTE, $46, 5    ; F#4
-.byte MUSIC_CMD::NOTE, $48, 5    ; G4
+.byte MUSIC_CMD::NOTE, $48, 4    ; G4
 .byte MUSIC_CMD::STOP
 
 level_complete_music:
 
-.byte MUSIC_CMD::NOTE, $39, 14    ; G#3
-.byte MUSIC_CMD::NOTE, $36, 14    ; F#3
-.byte MUSIC_CMD::NOTE, $3D, 14    ; B3
-.byte MUSIC_CMD::NOTE, $40,  8    ; C#4
-.byte MUSIC_CMD::NOTE, $48,  8    ; G4
-.byte MUSIC_CMD::NOTE, $42, 14    ; D#4
-.byte MUSIC_CMD::NOTE, $40,  8    ; C#4
-.byte MUSIC_CMD::NOTE, $48,  8    ; G4
-.byte MUSIC_CMD::NOTE, $42, 14    ; D#4
-.byte MUSIC_CMD::NOTE, $3D, 14    ; B3
-.byte MUSIC_CMD::NOTE, $40, 14    ; C#4
-.byte MUSIC_CMD::NOTE, $39, 14    ; G#3
-.byte MUSIC_CMD::NOTE, $36, 14    ; F#3
+.byte MUSIC_CMD::NOTE, $39, 16    ; G#3
+.byte MUSIC_CMD::NOTE, $36, 16    ; F#3
+.byte MUSIC_CMD::NOTE, $3D, 16    ; B3
+.byte MUSIC_CMD::NOTE, $40,  9    ; C#4
+.byte MUSIC_CMD::NOTE, $48,  9    ; G4
+.byte MUSIC_CMD::NOTE, $42, 16    ; D#4
+.byte MUSIC_CMD::NOTE, $40,  9    ; C#4
+.byte MUSIC_CMD::NOTE, $48,  9    ; G4
+.byte MUSIC_CMD::NOTE, $42, 16    ; D#4
+.byte MUSIC_CMD::NOTE, $3D, 16    ; B3
+.byte MUSIC_CMD::NOTE, $40, 16    ; C#4
+.byte MUSIC_CMD::NOTE, $39, 16    ; G#3
+.byte MUSIC_CMD::NOTE, $36, 16    ; F#3
 .byte MUSIC_CMD::STOP
